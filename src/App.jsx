@@ -26,8 +26,7 @@ async function callNarrator({ themeLabel, history, action }) {
   }
   const parsed = await response.json();
   if (!parsed.text || !Array.isArray(parsed.choices)) throw new Error("Formato inesperado");
-  return parsed;
-}// ---------- Small components ----------
+  return parsed;// ---------- Small components ----------
 function PhoneFrame({ children }) {
   return (
     <div className="w-full max-w-sm mx-auto">
@@ -310,8 +309,8 @@ function NarrationScreen({ theme, node, loading, error, voiceEnabled, onToggleVo
       </div>
     </div>
   );
-    }
-function useSpeechRecognition(lang = "pt-BR") {
+}
+}function useSpeechRecognition(lang = "pt-BR") {
   const [supported, setSupported] = useState(true);
   const [listening, setListening] = useState(false);
   const [transcript, setTranscript] = useState("");
@@ -462,58 +461,75 @@ function ChoiceScreen({ theme, node, onChoose, voiceEnabled }) {
         </button>
       </div>
     </div>
-  );function ParentPanel({ onClose, voiceEnabled, onToggleVoice }) {
+  );
+}
+
+function usePin() {
+  const [pin, setPinState] = useState(() => {
+    try {
+      return localStorage.getItem("hm_parent_pin") || "1234";
+    } catch (e) {
+      return "1234";
+    }
+  });
+  const setPin = (newPin) => {
+    setPinState(newPin);
+    try {
+      localStorage.setItem("hm_parent_pin", newPin);
+    } catch (e) {
+      /* localStorage indisponível, PIN só dura a sessão */
+    }
+  };
+  return [pin, setPin];
+}
+
+function ParentPanel({ onClose, voiceEnabled, onToggleVoice }) {
   const [unlocked, setUnlocked] = useState(false);
-  const [pin, setPin] = useState("");
-  const [confirmPin, setConfirmPin] = useState("");
-  const [creatingPin, setCreatingPin] = useState(false);
-  const [error, setError] = useState("");
+  const [pinInput, setPinInput] = useState("");
+  const [correct, setCorrect] = usePin();
+  const [loginError, setLoginError] = useState(false);
 
-  useEffect(() => {
-    const savedPin = localStorage.getItem("parent_pin");
-    if (!savedPin) {
-      setCreatingPin(true);
-    }
-  }, []);
+  const [changingPin, setChangingPin] = useState(false);
+  const [currentPinField, setCurrentPinField] = useState("");
+  const [newPinField, setNewPinField] = useState("");
+  const [confirmPinField, setConfirmPinField] = useState("");
+  const [pinChangeMsg, setPinChangeMsg] = useState("");
 
-  const handleAccess = () => {
-    const savedPin = localStorage.getItem("parent_pin");
-
-    if (creatingPin) {
-      if (pin.length !== 4) {
-        setError("O PIN deve ter 4 números.");
-        return;
-      }
-
-      if (pin !== confirmPin) {
-        setError("Os PINs não conferem.");
-        return;
-      }
-
-      localStorage.setItem("parent_pin", pin);
+  const tryUnlock = () => {
+    if (pinInput === correct) {
       setUnlocked(true);
-      setError("");
-      return;
-    }
-
-    if (pin === savedPin) {
-      setUnlocked(true);
-      setError("");
+      setLoginError(false);
     } else {
-      setError("PIN incorreto.");
+      setLoginError(true);
     }
   };
 
-  return (
-        <div
-      className="absolute inset-0 z-30 flex flex-col"
-      style={{ background: "#151225ee", backdropFilter: "blur(2px)" }}
-    >
-      <div className="flex justify-between items-center px-5 pt-8 pb-2">
-        <span className="font-baloo text-[#FFF6E9] text-base">
-          Área dos Pais
-        </span>
+  const savePinChange = () => {
+    setPinChangeMsg("");
+    if (currentPinField !== correct) {
+      setPinChangeMsg("PIN atual incorreto.");
+      return;
+    }
+    if (!/^\d{4}$/.test(newPinField)) {
+      setPinChangeMsg("O novo PIN precisa ter 4 números.");
+      return;
+    }
+    if (newPinField !== confirmPinField) {
+      setPinChangeMsg("Os PINs não coincidem.");
+      return;
+    }
+    setCorrect(newPinField);
+    setPinChangeMsg("PIN alterado com sucesso!");
+    setChangingPin(false);
+    setCurrentPinField("");
+    setNewPinField("");
+    setConfirmPinField("");
+  };
 
+  return (
+    <div className="absolute inset-0 z-30 flex flex-col" style={{ background: "#151225ee", backdropFilter: "blur(2px)" }}>
+      <div className="flex justify-between items-center px-5 pt-8 pb-2">
+        <span className="font-baloo text-[#FFF6E9] text-base">Área dos pais</span>
         <button onClick={onClose} className="p-2 rounded-full bg-white/10">
           <X size={16} className="text-[#FFF6E9]" />
         </button>
@@ -522,47 +538,22 @@ function ChoiceScreen({ theme, node, onChoose, voiceEnabled }) {
       {!unlocked ? (
         <div className="flex-1 flex flex-col items-center justify-center gap-4 px-8">
           <Lock size={28} className="text-[#F4B860]" />
-
-          <p className="text-[#FFF6E9]/70 text-sm font-nunito text-center">
-            {creatingPin
-              ? "Crie um PIN de 4 números para proteger a Área dos Pais."
-              : "Digite seu PIN."}
-          </p>
-
+          <p className="text-[#FFF6E9]/70 text-sm font-nunito text-center">Digite o PIN dos pais</p>
           <input
-            value={pin}
-            onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))}
+            value={pinInput}
+            onChange={(e) => { setPinInput(e.target.value); setLoginError(false); }}
             maxLength={4}
             inputMode="numeric"
             placeholder="••••"
             className="w-28 text-center tracking-[0.5em] py-2 rounded-xl bg-white/10 text-[#FFF6E9] font-baloo text-lg outline-none"
           />
-
-          {creatingPin && (
-            <input
-              value={confirmPin}
-              onChange={(e) =>
-                setConfirmPin(e.target.value.replace(/\D/g, ""))
-              }
-              maxLength={4}
-              inputMode="numeric"
-              placeholder="Confirmar PIN"
-              className="w-40 text-center py-2 rounded-xl bg-white/10 text-[#FFF6E9] font-baloo text-lg outline-none"
-            />
-          )}
-
-          {error && (
-            <p className="text-red-400 text-xs text-center">
-              {error}
-            </p>
-          )}
-
+          {loginError && <span className="text-[#FF8FA0] text-xs font-nunito">PIN incorreto, tente de novo.</span>}
           <button
-            onClick={handleAccess}
+            onClick={tryUnlock}
             className="px-6 py-2 rounded-xl font-baloo text-[#241F3D]"
             style={{ background: "#F4B860" }}
           >
-            {creatingPin ? "Salvar PIN" : "Entrar"}
+            Entrar
           </button>
         </div>
       ) : (
@@ -570,124 +561,77 @@ function ChoiceScreen({ theme, node, onChoose, voiceEnabled }) {
           <div className="rounded-2xl p-4 bg-white/5 flex items-center gap-3">
             <Clock size={18} className="text-[#6FB88A]" />
             <div>
-              <div className="text-[#FFF6E9] font-baloo text-sm">
-                18 min hoje
-              </div>
-              <div className="text-[#FFF6E9]/50 text-xs font-nunito">
-                Limite diário: 30 min
-              </div>
+              <div className="text-[#FFF6E9] font-baloo text-sm">18 min hoje</div>
+              <div className="text-[#FFF6E9]/50 text-xs font-nunito">Limite diário: 30 min</div>
             </div>
+          </div>
+          <div className="rounded-2xl p-4 bg-white/5">
+            <div className="text-[#FFF6E9] font-baloo text-sm mb-2">Preferências</div>
+            <label className="flex items-center justify-between text-[#FFF6E9]/80 text-xs font-nunito py-1">
+              Microfone da criança <input type="checkbox" defaultChecked disabled />
+            </label>
+            <label className="flex items-center justify-between text-[#FFF6E9]/80 text-xs font-nunito py-1">
+              Narração por voz <input type="checkbox" checked={voiceEnabled} onChange={onToggleVoice} />
+            </label>
           </div>
 
           <div className="rounded-2xl p-4 bg-white/5">
-            <div className="text-[#FFF6E9] font-baloo text-sm mb-2">
-              Preferências
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-[#FFF6E9] font-baloo text-sm">PIN dos pais</div>
+              <button
+                onClick={() => { setChangingPin((v) => !v); setPinChangeMsg(""); }}
+                className="text-[#F4B860] text-xs font-nunito font-bold"
+              >
+                {changingPin ? "Cancelar" : "Alterar"}
+              </button>
             </div>
 
-            <label className="flex items-center justify-between text-[#FFF6E9]/80 text-xs font-nunito py-1">
-              Microfone da criança
-              <input type="checkbox" defaultChecked disabled />
-            </label>
-
-            <label className="flex items-center justify-between text-[#FFF6E9]/80 text-xs font-nunito py-1">
-              Narração por voz
-              <input
-                type="checkbox"
-                checked={voiceEnabled}
-                onChange={onToggleVoice}
-              />
-            </label>
+            {changingPin && (
+              <div className="flex flex-col gap-2 mt-2">
+                <input
+                  type="password"
+                  value={currentPinField}
+                  onChange={(e) => setCurrentPinField(e.target.value)}
+                  maxLength={4}
+                  inputMode="numeric"
+                  placeholder="PIN atual"
+                  className="w-full text-center tracking-[0.3em] py-2 rounded-xl bg-white/10 text-[#FFF6E9] font-baloo text-sm outline-none"
+                />
+                <input
+                  type="password"
+                  value={newPinField}
+                  onChange={(e) => setNewPinField(e.target.value)}
+                  maxLength={4}
+                  inputMode="numeric"
+                  placeholder="Novo PIN (4 números)"
+                  className="w-full text-center tracking-[0.3em] py-2 rounded-xl bg-white/10 text-[#FFF6E9] font-baloo text-sm outline-none"
+                />
+                <input
+                  type="password"
+                  value={confirmPinField}
+                  onChange={(e) => setConfirmPinField(e.target.value)}
+                  maxLength={4}
+                  inputMode="numeric"
+                  placeholder="Confirmar novo PIN"
+                  className="w-full text-center tracking-[0.3em] py-2 rounded-xl bg-white/10 text-[#FFF6E9] font-baloo text-sm outline-none"
+                />
+                {pinChangeMsg && (
+                  <span className="text-xs font-nunito text-center" style={{ color: pinChangeMsg.includes("sucesso") ? "#6FB88A" : "#FF8FA0" }}>
+                    {pinChangeMsg}
+                  </span>
+                )}
+                <button
+                  onClick={savePinChange}
+                  className="w-full py-2 rounded-xl font-baloo text-[#241F3D] text-sm"
+                  style={{ background: "#F4B860" }}
+                >
+                  Salvar novo PIN
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
     </div>
-  );// ---------- App root ----------
-export default function App() {
-  const [screen, setScreen] = useState("home"); // home | themes | narration | choice
-  const [theme, setTheme] = useState(THEMES[0]);
-  const [history, setHistory] = useState([]);
-  const [node, setNode] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [showParent, setShowParent] = useState(false);
-  const [voiceEnabled, setVoiceEnabled] = useState(true);
-
-  const fetchNext = useCallback(async (t, hist, action) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const result = await callNarrator({ themeLabel: t.label, history: hist, action });
-      setNode(result);
-      setHistory([...hist, result.text]);
-    } catch (e) {
-      setError("A história soneca por um instante. Tente de novo em breve.");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  const startTheme = (t) => {
-    setTheme(t);
-    setHistory([]);
-    setNode(null);
-    setScreen("narration");
-    fetchNext(t, [], "Começar a aventura");
-  };
-
-  const goHome = () => {
-    if (typeof window !== "undefined" && window.speechSynthesis) window.speechSynthesis.cancel();
-    setScreen("home");
-    setHistory([]);
-    setNode(null);
-    setError(null);
-  };
-
-  const handleChoose = (actionLabel) => {
-    setScreen("narration");
-    fetchNext(theme, history, actionLabel);
-  };
-
-  return (
-    <div className="min-h-screen w-full flex items-center justify-center py-10 px-4" style={{ background: "#1a0e33" }}>
-      <link rel="preconnect" href="https://fonts.googleapis.com" />
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700&family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700;800&display=swap');
-        .font-baloo { font-family: 'Baloo 2', cursive; }
-        .font-nunito { font-family: 'Nunito', sans-serif; }
-        .font-display { font-family: 'Fredoka', 'Baloo 2', cursive; font-weight: 600; }
-      `}</style>
-
-      <PhoneFrame>
-        <div className="relative w-full h-full font-nunito">
-          {screen === "home" && (
-            <HomeScreen onNew={() => setScreen("themes")} onParent={() => setShowParent(true)} voiceEnabled={voiceEnabled} />
-          )}
-          {screen === "themes" && (
-            <ThemePicker onBack={goHome} onPick={startTheme} voiceEnabled={voiceEnabled} />
-          )}
-          {screen === "narration" && (
-            <NarrationScreen
-              theme={theme}
-              node={node}
-              loading={loading}
-              error={error}
-              voiceEnabled={voiceEnabled}
-              onToggleVoice={() => setVoiceEnabled((v) => !v)}
-              onHome={goHome}
-              onParent={() => setShowParent(true)}
-              onChoicesReady={() => setScreen("choice")}
-            />
-          )}
-          {screen === "choice" && node && (
-            <ChoiceScreen theme={theme} node={node} onChoose={handleChoose} voiceEnabled={voiceEnabled} />
-          )}
-          {showParent && <ParentPanel onClose={() => setShowParent(false)} voiceEnabled={voiceEnabled} onToggleVoice={() => setVoiceEnabled((v) => !v)} />}
-        </div>
-      </PhoneFrame>
-    </div>
   );
-}
-  }
-
-
-  
+         }
