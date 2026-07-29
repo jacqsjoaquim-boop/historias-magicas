@@ -28,6 +28,52 @@ Ação escolhida agora pela criança: ${action}
 Gere o próximo trecho no formato JSON pedido.`;
 }
 
+const SAFETY_SYSTEM_PROMPT = `Você é um classificador de segurança para conteúdo de um app infantil (crianças de 4 a 8 anos), em português do Brasil.
+
+Você vai receber um trecho de história e uma lista de opções de ação. Sua ÚNICA tarefa é responder EXATAMENTE uma destas duas opções, sem nenhum texto adicional:
+- "OK" — se o conteúdo é totalmente apropriado para crianças pequenas
+- "BLOQUEAR" — se o conteúdo contém qualquer um destes problemas: violência ou ameaças, medo intenso ou horror, temas adultos ou sexuais, pedido/uso de informação pessoal real (nome completo, endereço, escola, telefone), linguagem ofensiva, ou qualquer coisa inadequada para essa faixa etária
+
+Responda SOMENTE "OK" ou "BLOQUEAR", nada mais.`;
+
+async function checkSafety({ text, choices }) {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  const content = `Trecho da história: "${text}"\nOpções: ${choices.map((c) => c.label).join(", ")}`;
+
+  try {
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 10,
+        system: SAFETY_SYSTEM_PROMPT,
+        messages: [{ role: "user", content }],
+      }),
+    });
+    if (!response.ok) return true;
+    const data = await response.json();
+    const verdict = (data.content || [])
+      .map((b) => (b.type === "text" ? b.text : ""))
+      .join("")
+      .trim()
+      .toUpperCase();
+    return verdict.startsWith("OK");
+  } catch (e) {
+    return true;
+  }
+}
+
+const SAFE_FALLBACK = {
+  text: "A história faz uma pausa mágica por um instante, como se o vento estivesse pensando no próximo capítulo.",
+  choices: [{ label: "Continuar a caminhada" }, { label: "Olhar ao redor com calma" }],
+  chapterEnd: false,
+};
+
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     res.status(405).json({ error: "Método não permitido" });
@@ -78,6 +124,12 @@ export default async function handler(req, res) {
 
     if (!parsed.text || !Array.isArray(parsed.choices)) {
       res.status(502).json({ error: "Formato inesperado da IA" });
+      return;
+    }
+
+    const isSafe = await checkSafety({ text: parsed.text, choices: parsed.choices });
+    if (!isSafe) {
+      res.status(200).json(SAFE_FALLBACK);
       return;
     }
 
