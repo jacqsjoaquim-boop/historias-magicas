@@ -310,7 +310,8 @@ function NarrationScreen({ theme, node, loading, error, voiceEnabled, onToggleVo
       </div>
     </div>
   );
-}function useSpeechRecognition(lang = "pt-BR") {
+            }
+function useSpeechRecognition(lang = "pt-BR") {
   const [supported, setSupported] = useState(true);
   const [listening, setListening] = useState(false);
   const [transcript, setTranscript] = useState("");
@@ -461,14 +462,147 @@ function ChoiceScreen({ theme, node, onChoose, voiceEnabled }) {
         </button>
       </div>
     </div>
-  );
-}
-
-function ParentPanel({ onClose, voiceEnabled, onToggleVoice }) {
+  );function ParentPanel({ onClose, voiceEnabled, onToggleVoice }) {
   const [unlocked, setUnlocked] = useState(false);
   const [pin, setPin] = useState("");
-  const correct = "1234";
+  const [confirmPin, setConfirmPin] = useState("");
+  const [creatingPin, setCreatingPin] = useState(false);
+  const [error, setError] = useState("");
 
+  useEffect(() => {
+    const savedPin = localStorage.getItem("parent_pin");
+    if (!savedPin) {
+      setCreatingPin(true);
+    }
+  }, []);
+
+  const handleAccess = () => {
+    const savedPin = localStorage.getItem("parent_pin");
+
+    if (creatingPin) {
+      if (pin.length !== 4) {
+        setError("O PIN deve ter 4 números.");
+        return;
+      }
+
+      if (pin !== confirmPin) {
+        setError("Os PINs não conferem.");
+        return;
+      }
+
+      localStorage.setItem("parent_pin", pin);
+      setUnlocked(true);
+      setError("");
+      return;
+    }
+
+    if (pin === savedPin) {
+      setUnlocked(true);
+      setError("");
+    } else {
+      setError("PIN incorreto.");
+    }
+  };
+
+  return (
+}    <div
+      className="absolute inset-0 z-30 flex flex-col"
+      style={{ background: "#151225ee", backdropFilter: "blur(2px)" }}
+    >
+      <div className="flex justify-between items-center px-5 pt-8 pb-2">
+        <span className="font-baloo text-[#FFF6E9] text-base">
+          Área dos Pais
+        </span>
+
+        <button onClick={onClose} className="p-2 rounded-full bg-white/10">
+          <X size={16} className="text-[#FFF6E9]" />
+        </button>
+      </div>
+
+      {!unlocked ? (
+        <div className="flex-1 flex flex-col items-center justify-center gap-4 px-8">
+          <Lock size={28} className="text-[#F4B860]" />
+
+          <p className="text-[#FFF6E9]/70 text-sm font-nunito text-center">
+            {creatingPin
+              ? "Crie um PIN de 4 números para proteger a Área dos Pais."
+              : "Digite seu PIN."}
+          </p>
+
+          <input
+            value={pin}
+            onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))}
+            maxLength={4}
+            inputMode="numeric"
+            placeholder="••••"
+            className="w-28 text-center tracking-[0.5em] py-2 rounded-xl bg-white/10 text-[#FFF6E9] font-baloo text-lg outline-none"
+          />
+
+          {creatingPin && (
+            <input
+              value={confirmPin}
+              onChange={(e) =>
+                setConfirmPin(e.target.value.replace(/\D/g, ""))
+              }
+              maxLength={4}
+              inputMode="numeric"
+              placeholder="Confirmar PIN"
+              className="w-40 text-center py-2 rounded-xl bg-white/10 text-[#FFF6E9] font-baloo text-lg outline-none"
+            />
+          )}
+
+          {error && (
+            <p className="text-red-400 text-xs text-center">
+              {error}
+            </p>
+          )}
+
+          <button
+            onClick={handleAccess}
+            className="px-6 py-2 rounded-xl font-baloo text-[#241F3D]"
+            style={{ background: "#F4B860" }}
+          >
+            {creatingPin ? "Salvar PIN" : "Entrar"}
+          </button>
+        </div>
+      ) : (
+        <div className="flex-1 px-5 pb-6 flex flex-col gap-4 overflow-y-auto">
+          <div className="rounded-2xl p-4 bg-white/5 flex items-center gap-3">
+            <Clock size={18} className="text-[#6FB88A]" />
+            <div>
+              <div className="text-[#FFF6E9] font-baloo text-sm">
+                18 min hoje
+              </div>
+              <div className="text-[#FFF6E9]/50 text-xs font-nunito">
+                Limite diário: 30 min
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-2xl p-4 bg-white/5">
+            <div className="text-[#FFF6E9] font-baloo text-sm mb-2">
+              Preferências
+            </div>
+
+            <label className="flex items-center justify-between text-[#FFF6E9]/80 text-xs font-nunito py-1">
+              Microfone da criança
+              <input type="checkbox" defaultChecked disabled />
+            </label>
+
+            <label className="flex items-center justify-between text-[#FFF6E9]/80 text-xs font-nunito py-1">
+              Narração por voz
+              <input
+                type="checkbox"
+                checked={voiceEnabled}
+                onChange={onToggleVoice}
+              />
+            </label>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
   return (
     <div className="absolute inset-0 z-30 flex flex-col" style={{ background: "#151225ee", backdropFilter: "blur(2px)" }}>
       <div className="flex justify-between items-center px-5 pt-8 pb-2">
@@ -519,7 +653,9 @@ function ParentPanel({ onClose, voiceEnabled, onToggleVoice }) {
         </div>
       )}
     </div>
-  );// ---------- App root ----------
+  );
+            }
+// ---------- App root ----------
 export default function App() {
   const [screen, setScreen] = useState("home"); // home | themes | narration | choice
   const [theme, setTheme] = useState(THEMES[0]);
@@ -604,5 +740,4 @@ export default function App() {
       </PhoneFrame>
     </div>
   );
-}
 }
