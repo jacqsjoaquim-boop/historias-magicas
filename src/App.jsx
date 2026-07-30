@@ -634,4 +634,90 @@ function ParentPanel({ onClose, voiceEnabled, onToggleVoice }) {
       )}
     </div>
   );
-         }
+         }// ---------- App root ----------
+export default function App() {
+  const [screen, setScreen] = useState("home"); // home | themes | narration | choice
+  const [theme, setTheme] = useState(THEMES[0]);
+  const [history, setHistory] = useState([]);
+  const [node, setNode] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [showParent, setShowParent] = useState(false);
+  const [voiceEnabled, setVoiceEnabled] = useState(true);
+
+  const fetchNext = useCallback(async (t, hist, action) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await callNarrator({ themeLabel: t.label, history: hist, action });
+      setNode(result);
+      setHistory([...hist, result.text]);
+    } catch (e) {
+      setError("A história soneca por um instante. Tente de novo em breve.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const startTheme = (t) => {
+    setTheme(t);
+    setHistory([]);
+    setNode(null);
+    setScreen("narration");
+    fetchNext(t, [], "Começar a aventura");
+  };
+
+  const goHome = () => {
+    if (typeof window !== "undefined" && window.speechSynthesis) window.speechSynthesis.cancel();
+    setScreen("home");
+    setHistory([]);
+    setNode(null);
+    setError(null);
+  };
+
+  const handleChoose = (actionLabel) => {
+    setNode(null);
+    setScreen("narration");
+    fetchNext(theme, history, actionLabel);
+  };
+
+  return (
+    <div className="min-h-screen w-full flex items-center justify-center py-10 px-4" style={{ background: "#1a0e33" }}>
+      <link rel="preconnect" href="https://fonts.googleapis.com" />
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700&family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700;800&display=swap');
+        .font-baloo { font-family: 'Baloo 2', cursive; }
+        .font-nunito { font-family: 'Nunito', sans-serif; }
+        .font-display { font-family: 'Fredoka', 'Baloo 2', cursive; font-weight: 600; }
+      `}</style>
+
+      <PhoneFrame>
+        <div className="relative w-full h-full font-nunito">
+          {screen === "home" && (
+            <HomeScreen onNew={() => setScreen("themes")} onParent={() => setShowParent(true)} voiceEnabled={voiceEnabled} />
+          )}
+          {screen === "themes" && (
+            <ThemePicker onBack={goHome} onPick={startTheme} voiceEnabled={voiceEnabled} />
+          )}
+          {screen === "narration" && (
+            <NarrationScreen
+              theme={theme}
+              node={node}
+              loading={loading}
+              error={error}
+              voiceEnabled={voiceEnabled}
+              onToggleVoice={() => setVoiceEnabled((v) => !v)}
+              onHome={goHome}
+              onParent={() => setShowParent(true)}
+              onChoicesReady={() => setScreen("choice")}
+            />
+          )}
+          {screen === "choice" && node && (
+            <ChoiceScreen theme={theme} node={node} onChoose={handleChoose} voiceEnabled={voiceEnabled} />
+          )}
+          {showParent && <ParentPanel onClose={() => setShowParent(false)} voiceEnabled={voiceEnabled} onToggleVoice={() => setVoiceEnabled((v) => !v)} />}
+        </div>
+      </PhoneFrame>
+    </div>
+      );
+      }
