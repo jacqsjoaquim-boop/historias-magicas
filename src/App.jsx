@@ -721,8 +721,8 @@ export default function App() {
             <ChoiceScreen theme={theme} node={node} onChoose={handleChoose} voiceEnabled={voiceEnabled} />
           )}
           {showParent && <ParentPanel onClose={() => setShowParent(false)} voiceEnabled={voiceEnabled} onToggleVoice={() => setVoiceEnabled((v) => !v)} />}
-      </div>
-725: </PhoneFrame>
-726: </div>
-727:   );
-728: }
+ </div>
+      </PhoneFrame>
+    </div>
+  );
+}
