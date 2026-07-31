@@ -635,6 +635,15 @@ function ParentPanel({ onClose, voiceEnabled, onToggleVoice }) {
     </div>
   );
          }// ---------- App root ----------
+function PhoneFrame({ children }) {
+  return (
+    <div className="min-h-screen w-full flex items-center justify-center bg-black">
+      <div className="relative w-full max-w-[420px] min-h-screen sm:min-h-[850px] sm:max-h-[850px] sm:rounded-[2.5rem] overflow-hidden bg-[#1a0f2e] shadow-2xl">
+        {children}
+      </div>
+    </div>
+  );
+}
 export default function App() {
   const [screen, setScreen] = useState("home"); // home | themes | narration | choice
   const [theme, setTheme] = useState(THEMES[0]);
