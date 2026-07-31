@@ -26,18 +26,10 @@ async function callNarrator({ themeLabel, history, action }) {
   }
   const parsed = await response.json();
   if (!parsed.text || !Array.isArray(parsed.choices)) throw new Error("Formato inesperado");
-  return parsed;// ---------- Small components ----------
-function PhoneFrame({ children }) {
-  return (
-    <div className="w-full max-w-sm mx-auto">
-      <div className="relative rounded-[2.5rem] border-[6px] border-[#151225] bg-[#151225] shadow-2xl overflow-hidden" style={{ aspectRatio: "9/19" }}>
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-24 h-4 bg-[#151225] rounded-b-xl z-20" />
-        <div className="w-full h-full overflow-hidden">{children}</div>
-      </div>
-    </div>
-  );
+  return parsed;
 }
 
+// ---------- Small components ----------
 function StoryOrb({ active, glow }) {
   return (
     <div className="relative flex items-center justify-center" style={{ width: 72, height: 72 }}>
@@ -310,7 +302,8 @@ function NarrationScreen({ theme, node, loading, error, voiceEnabled, onToggleVo
     </div>
   );
 }
-}function useSpeechRecognition(lang = "pt-BR") {
+
+function useSpeechRecognition(lang = "pt-BR") {
   const [supported, setSupported] = useState(true);
   const [listening, setListening] = useState(false);
   const [transcript, setTranscript] = useState("");
@@ -634,7 +627,9 @@ function ParentPanel({ onClose, voiceEnabled, onToggleVoice }) {
       )}
     </div>
   );
-         }// ---------- App root ----------
+}
+
+// ---------- App root ----------
 function PhoneFrame({ children }) {
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-black">
@@ -644,6 +639,7 @@ function PhoneFrame({ children }) {
     </div>
   );
 }
+
 export default function App() {
   const [screen, setScreen] = useState("home"); // home | themes | narration | choice
   const [theme, setTheme] = useState(THEMES[0]);
@@ -725,8 +721,8 @@ export default function App() {
             <ChoiceScreen theme={theme} node={node} onChoose={handleChoose} voiceEnabled={voiceEnabled} />
           )}
           {showParent && <ParentPanel onClose={() => setShowParent(false)} voiceEnabled={voiceEnabled} onToggleVoice={() => setVoiceEnabled((v) => !v)} />}
-        </div>
-      </PhoneFrame>
-    </div>
-      );
-      }
+      </div>
+725: </PhoneFrame>
+726: </div>
+727:   );
+728: }
